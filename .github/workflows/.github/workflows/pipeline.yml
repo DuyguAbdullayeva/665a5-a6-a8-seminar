@@ -1,0 +1,43 @@
+name: Advanced Student Pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repo-nu clone et
+        uses: actions/checkout@v3
+
+      - name: Fayl strukturunu göstər
+        run: |
+          echo "Repo strukturu:"
+          ls -R
+
+      - name: TXT faylları yoxla
+        run: |
+          echo "TXT fayllar:"
+          find . -name "*.txt"
+
+      - name: Qovluq sayını yoxla
+        run: |
+          echo "Qovluqlar:"
+          find . -type d
+
+      - name: Minimum 2 fayl var mı yoxla
+        run: |
+          FILE_COUNT=$(find . -type f | wc -l)
+          echo "Fayl sayı: $FILE_COUNT"
+          
+          if [ $FILE_COUNT -lt 2 ]; then
+            echo "❌ Kifayət qədər fayl yoxdur!"
+            exit 1
+          else
+            echo "✅ Fayl sayı kifayətdir"
+          fi
+
+      - name: Pipeline tamamlandı
+        run: echo "✅ Pipeline uğurla işləyir 🚀"
