@@ -1,43 +1,82 @@
-name: Advanced Student Pipeline
+name: Data Analysis CI/CD
 
 on:
-  push:
   pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
 
 jobs:
-  validation:
+
+  Build_Test:
+    name: "CI: Test Analysis Scripts"
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Repo-nu clone et
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Fayl strukturunu göstər
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install numpy pandas pytest
+
+      - name: Validate script syntax
         run: |
-          echo "Repo strukturu:"
-          ls -R
+          python -c "import ast; ast.parse(open('analysis.py').read())"
+          echo "Syntax OK"
 
-      - name: TXT faylları yoxla
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/
+
+  Build_Deploy:
+    name: "CD: Build and Deploy Report"
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install numpy pandas
+
+      - name: Run analysis and generate report
+        run: python analysis.py
+
+      - name: Prepare release directory
         run: |
-          echo "TXT fayllar:"
-          find . -name "*.txt"
+          mkdir -p release
+          cp report.txt release/
+          echo "Build date: $(date)" >> release/release-info.txt
+          echo "Commit: ${{ github.sha }}" >> release/release-info.txt
 
-      - name: Qovluq sayını yoxla
+      - name: Simulate deployment
         run: |
-          echo "Qovluqlar:"
-          find . -type d
+          echo "=============================="
+          echo "   DEPLOYMENT SIMULATION LOG  "
+          echo "=============================="
+          echo "Version: ${{ github.sha }}"
+          echo "Branch:  ${{ github.ref_name }}"
+          echo "Time:    $(date)"
+          echo "Status:  Successfully deployed!"
+          echo "=============================="
 
-      - name: Minimum 2 fayl var mı yoxla
-        run: |
-          FILE_COUNT=$(find . -type f | wc -l)
-          echo "Fayl sayı: $FILE_COUNT"
-          
-          if [ $FILE_COUNT -lt 2 ]; then
-            echo "❌ Kifayət qədər fayl yoxdur!"
-            exit 1
-          else
-            echo "✅ Fayl sayı kifayətdir"
-          fi
-
-      - name: Pipeline tamamlandı
-        run: echo "✅ Pipeline uğurla işləyir 🚀"
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: release/
